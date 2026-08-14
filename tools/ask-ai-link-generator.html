@@ -144,6 +144,7 @@
   .u-param { color: var(--c-param); }
   .u-encoded { color: var(--c-encoded); }
   .warnline { font-size: 12.5px; color: var(--warn); margin: 0 0 8px; }
+  .noteline { font-size: 12.5px; color: var(--ink-soft); margin: 0 0 8px; }
   .legend { font-size: 12px; color: var(--ink-soft); display: flex; gap: 14px; flex-wrap: wrap; margin-bottom: 12px; }
   .legend span::before { content: "■ "; }
   .actions { display: flex; gap: 8px; margin-top: 8px; flex-wrap: wrap; }
@@ -270,7 +271,10 @@
 <script>
 const SERVICES = [
   { id: "chatgpt",    name: "ChatGPT",        base: "https://chatgpt.com/",             param: "q", opts: true, on: true },
-  { id: "aimode",     name: "Google AI Mode", base: "https://www.google.com/search",    param: "q", fixed: ["udm=50"], on: true },
+  // AI Mode は q= を検索クエリとして扱うため %0A が落ちる。改行のまま渡すと
+  // URL末尾に次の行が直結して壊れるので、こちら側で空白に潰しておく。
+  { id: "aimode",     name: "Google AI Mode", base: "https://www.google.com/search",    param: "q", fixed: ["udm=50"], flatten: true, on: true,
+    note: "改行が保持されないため空白に変換しています。1ターンの検索応答なので「まず質問して」は効きません。" },
   { id: "claude",     name: "Claude",         base: "https://claude.ai/new",            param: "q", on: true },
   { id: "perplexity", name: "Perplexity",     base: "https://www.perplexity.ai/search", param: "q", on: true },
   // Gemini は ?q= でのプリフィルに対応していない（2026-08 時点）。
@@ -362,7 +366,8 @@ function resolvedPrompt() {
 
 /** サービスごとのURLを、構造ごとに分解して返す */
 function buildParts(svc, prompt) {
-  const encoded = encodeURIComponent(prompt);
+  const text = svc.flatten ? prompt.replace(/[ \t]*\n+[ \t]*/g, " ").trim() : prompt;
+  const encoded = encodeURIComponent(text);
   const extra = [...(svc.fixed || [])];
   if (svc.opts) {
     if (el.optSearch.checked) extra.push("hints=search");
@@ -401,6 +406,7 @@ function render() {
         <span class="len ${cls}">${len.toLocaleString()} 文字${len > MAX_URL ? "（上限超過）" : len > WARN_URL ? "（要注意）" : ""}</span>
       </div>
       ${svc.warn ? `<p class="warnline">このサービスは <code>?q=</code> でのプリフィルに対応していません。URLは開きますが、入力欄は空のままです。</p>` : ""}
+      ${svc.note ? `<p class="noteline">${svc.note}</p>` : ""}
       <div class="urlbox"><span class="u-base">${escapeHtml(parts.base)}</span><span class="u-param">${escapeHtml(parts.param)}</span><span class="u-encoded">${escapeHtml(parts.encoded)}</span></div>
       <div class="actions">
         <button data-copy="${escapeHtml(parts.url)}">URLをコピー</button>

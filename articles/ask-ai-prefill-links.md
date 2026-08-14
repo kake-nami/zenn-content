@@ -57,6 +57,40 @@ https://www.google.com/search?udm=50&q={encoded}
 
 `udm=50` が AI Mode のスイッチです。中身は Gemini なので、答えるモデルは変わりません。しかもこっちの `q=` は普通の検索クエリなので、URLで渡すのが本来の使い方です。確実に通ります。
 
+ただし、これはこれでクセがあります。
+
+**改行が保持されません。** `q=` はあくまで検索クエリなので `%0A` が落ちます。何が起きるかというと、
+
+```
+次の記事を読んでください。
+https://example.com/article
+この記事の内容が…
+```
+
+これがそのまま送られると、
+
+```
+…読んでください。 https://example.com/articleこの記事の内容が…
+```
+
+**URLの末尾に次の行が直結します。** URLが壊れて記事を読みに行けなくなる場合があるので、AI Mode に渡すときは改行を空白に潰しておく必要があります。
+
+```javascript
+const flat = prompt.replace(/[ \t]*\n+[ \t]*/g, " ").trim();
+```
+
+**「まず質問して」も効きません。** AI Mode は対話ではなく1ターンの検索応答なので、質問を返さずいきなり要約を出してきます。5章で書いた「まず質問して」の設計はここでは成立しません。
+
+なので使い分けとしてはこうなります。
+
+| | 対話させたい（質問を返させる） | 1発で答えさせたい |
+|---|---|---|
+| ChatGPT / Claude | ◯ | ◯ |
+| Perplexity | △ | ◯ |
+| Google AI Mode | ✕ | ◯ |
+
+型Aの説得型（「なぜ最適なのか教えて」）なら AI Mode でも成立します。型Bや対話型を狙うなら、AI Mode は数合わせで並べるだけになります。
+
 :::message alert
 これらは各社が「仕様です」と公開してるものではないので、全部予告なく変わります。本番に置くなら、たまに自分で踏んで確認する運用が要ります。実際この記事も、下書きの時点では Gemini を4本目に入れてました。
 :::
@@ -213,6 +247,7 @@ HTML。`target="_blank"` と `rel="noopener"` を付けます。
 - URL長のカウント（2000字超で警告）
 - 生成されるURLの構造を色分け表示
 - Gemini は既定でオフ（選ぶと非対応の警告が出ます）
+- AI Mode 向けだけ改行を空白に自動変換
 
 → **[「AIに聞く」リンクジェネレータ](https://kake-nami.github.io/zenn-content/tools/ask-ai-link-generator.html)**（ソース: [ask-ai-link-generator.html](https://github.com/kake-nami/zenn-content/blob/main/tools/ask-ai-link-generator.html)）
 
