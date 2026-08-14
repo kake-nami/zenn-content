@@ -24,9 +24,15 @@ zenn-content/
 |---|---|
 | `tools/ask-ai-link-generator.html` | https://kake-nami.github.io/zenn-content/tools/ask-ai-link-generator.html |
 
-`ask-ai-link-generator.html` は依存ゼロの単一HTML。記事URLと質問文から ChatGPT / Gemini / Claude /
-Perplexity のプリフィルリンクを生成し、note / Markdown / HTML の3形式で書き出す。
+`ask-ai-link-generator.html` は依存ゼロの単一HTML。記事URLと質問文から ChatGPT / Google AI Mode /
+Claude / Perplexity のプリフィルリンクを生成し、note / Markdown / HTML の3形式で書き出す。
 URL長を数えて 1800 字で警告、2000 字で超過表示する。
+
+:::message
+Gemini（`gemini.google.com/app?q=`）は**プリフィル非対応**（2026-08-15 実機確認）。
+URLは開くが入力欄が空のままになる。同じ Gemini を使いたい場合は Google AI Mode
+（`google.com/search?udm=50&q=`）を使う。ツール側では Gemini を既定オフにしてある。
+:::
 
 ## 初回セットアップ
 
@@ -99,5 +105,7 @@ published: false   # true にすると公開される
       → https://kake-nami.github.io/zenn-content/tools/ask-ai-link-generator.html
 - [x] スクリーンショット2枚を `images/ask-ai/` に配置
       → `generator.png`（7章・ツール画面） / `prefilled-result.png`（7章末・踏んだ結果）
-- [ ] 各AIサービスの `?q=` を実際に踏んで、現時点で動くことを確認
+- [x] 各AIサービスの `?q=` を実際に踏んで確認（2026-08-15）
+      → ChatGPT / Claude / Perplexity は動作。Gemini のみ非対応 → Google AI Mode に差し替え
+- [ ] `images/ask-ai/generator.png` を撮り直す（サービス欄が Gemini のままの旧UI）
 - [ ] `published: true` に変更

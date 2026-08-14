@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>「AIに聞く」リンクジェネレータ</title>
-<meta name="description" content="記事URLと質問文から、ChatGPT / Gemini / Claude / Perplexity のプリフィルリンクを生成します。">
+<meta name="description" content="記事URLと質問文から、ChatGPT / Google AI Mode / Claude / Perplexity のプリフィルリンクを生成します。">
 <style>
   :root {
     color-scheme: light dark;
@@ -92,6 +92,12 @@
   .checks { display: flex; gap: 16px; flex-wrap: wrap; margin-top: 4px; }
   .check { display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 500; }
   .check input { accent-color: var(--accent); }
+  .check-warn { color: var(--ink-soft); }
+  .badge {
+    font-size: 11px; font-weight: 600; letter-spacing: 0.02em;
+    color: var(--warn); border: 1px solid var(--warn);
+    border-radius: 999px; padding: 0 7px; line-height: 1.6;
+  }
   button {
     font: inherit;
     font-size: 13px;
@@ -137,6 +143,7 @@
   .u-base { color: var(--c-base); }
   .u-param { color: var(--c-param); }
   .u-encoded { color: var(--c-encoded); }
+  .warnline { font-size: 12.5px; color: var(--warn); margin: 0 0 8px; }
   .legend { font-size: 12px; color: var(--ink-soft); display: flex; gap: 14px; flex-wrap: wrap; margin-bottom: 12px; }
   .legend span::before { content: "■ "; }
   .actions { display: flex; gap: 8px; margin-top: 8px; flex-wrap: wrap; }
@@ -182,7 +189,7 @@
 
 <header>
   <h1>「AIに聞く」リンクジェネレータ</h1>
-  <p class="lede">記事URLと質問文から、ChatGPT / Gemini / Claude / Perplexity のプリフィルリンクを生成します。すべてブラウザ内で完結し、入力内容はどこにも送信されません。</p>
+  <p class="lede">記事URLと質問文から、ChatGPT / Google AI Mode / Claude / Perplexity のプリフィルリンクを生成します。すべてブラウザ内で完結し、入力内容はどこにも送信されません。</p>
 </header>
 
 <section>
@@ -249,7 +256,8 @@
 </section>
 
 <div class="alert">
-  Gemini の <code>?q=</code> はプリフィルが不安定です。またこれらは各社が仕様として公開しているパラメータではないため、予告なく変わります。本番に置くなら定期的に踏んで確認してください。
+  <strong>Gemini（<code>gemini.google.com/app</code>）は <code>?q=</code> に対応していません。</strong>URLは開きますが入力欄は空のままです（2026-08 時点で実機確認）。同じ Gemini に投げたい場合は Google AI Mode（<code>google.com/search?udm=50</code>）を使ってください。<br>
+  そもそもこれらは各社が仕様として公開しているパラメータではないため、予告なく変わります。本番に置くなら定期的に踏んで確認してください。
 </div>
 
 <footer>
@@ -261,10 +269,13 @@
 
 <script>
 const SERVICES = [
-  { id: "chatgpt",    name: "ChatGPT",    base: "https://chatgpt.com/",                param: "q", opts: true },
-  { id: "gemini",     name: "Gemini",     base: "https://gemini.google.com/app",       param: "q" },
-  { id: "claude",     name: "Claude",     base: "https://claude.ai/new",               param: "q" },
-  { id: "perplexity", name: "Perplexity", base: "https://www.perplexity.ai/search",    param: "q" },
+  { id: "chatgpt",    name: "ChatGPT",        base: "https://chatgpt.com/",             param: "q", opts: true, on: true },
+  { id: "aimode",     name: "Google AI Mode", base: "https://www.google.com/search",    param: "q", fixed: ["udm=50"], on: true },
+  { id: "claude",     name: "Claude",         base: "https://claude.ai/new",            param: "q", on: true },
+  { id: "perplexity", name: "Perplexity",     base: "https://www.perplexity.ai/search", param: "q", on: true },
+  // Gemini は ?q= でのプリフィルに対応していない（2026-08 時点）。
+  // URLは開くが入力欄は空のまま。中身が同じ Gemini なら Google AI Mode を使う。
+  { id: "gemini",     name: "Gemini",         base: "https://gemini.google.com/app",    param: "q", on: false, warn: "プリフィル非対応" },
 ];
 
 const PRESETS = [
@@ -331,8 +342,9 @@ PRESETS.forEach((p, i) => {
 });
 SERVICES.forEach(s => {
   const label = document.createElement("label");
-  label.className = "check";
-  label.innerHTML = `<input type="checkbox" data-svc="${s.id}" checked> ${s.name}`;
+  label.className = "check" + (s.warn ? " check-warn" : "");
+  label.innerHTML = `<input type="checkbox" data-svc="${s.id}"${s.on ? " checked" : ""}> ${s.name}`
+    + (s.warn ? ` <span class="badge">${s.warn}</span>` : "");
   el.services.appendChild(label);
 });
 el.prompt.value = PRESETS[0].body;
@@ -351,7 +363,7 @@ function resolvedPrompt() {
 /** サービスごとのURLを、構造ごとに分解して返す */
 function buildParts(svc, prompt) {
   const encoded = encodeURIComponent(prompt);
-  const extra = [];
+  const extra = [...(svc.fixed || [])];
   if (svc.opts) {
     if (el.optSearch.checked) extra.push("hints=search");
     if (el.optTemp.checked) extra.push("temporary-chat=true");
@@ -388,6 +400,7 @@ function render() {
         <strong>${svc.name}</strong>
         <span class="len ${cls}">${len.toLocaleString()} 文字${len > MAX_URL ? "（上限超過）" : len > WARN_URL ? "（要注意）" : ""}</span>
       </div>
+      ${svc.warn ? `<p class="warnline">このサービスは <code>?q=</code> でのプリフィルに対応していません。URLは開きますが、入力欄は空のままです。</p>` : ""}
       <div class="urlbox"><span class="u-base">${escapeHtml(parts.base)}</span><span class="u-param">${escapeHtml(parts.param)}</span><span class="u-encoded">${escapeHtml(parts.encoded)}</span></div>
       <div class="actions">
         <button data-copy="${escapeHtml(parts.url)}">URLをコピー</button>

@@ -23,11 +23,13 @@ note のほうで、マッチングアプリのLPに仕込まれてた「AIに�
 ## 各AIのURLには口が空いてる
 
 ```
-ChatGPT     https://chatgpt.com/?q={encoded}
-Claude      https://claude.ai/new?q={encoded}
-Perplexity  https://www.perplexity.ai/search?q={encoded}
-Gemini      https://gemini.google.com/app?q={encoded}
+ChatGPT        https://chatgpt.com/?q={encoded}
+Claude         https://claude.ai/new?q={encoded}
+Perplexity     https://www.perplexity.ai/search?q={encoded}
+Google AI Mode https://www.google.com/search?udm=50&q={encoded}
 ```
+
+4本目が Gemini じゃないのは理由があって、後述します。
 
 おまけでこういうのもあります。
 
@@ -41,8 +43,22 @@ https://chatgpt.com/?temporary-chat=true&q={encoded}
 
 `hints=search` は元ネタのLPでも使われてました。これ地味に大事で、検索が発火しないとAIは llms.txt を読まずに想像で答えてしまいます。効かせられるなら効かせたほうがいいです。
 
+### Gemini だけ効かない
+
+先に書いておきます。**`https://gemini.google.com/app?q=` は効きません。** 私も最初これで組んで、4サービス中1つだけ入力欄が空のまま開くので首をひねりました。
+
+Google はそもそもURLでプロンプトを渡す仕様を出していません。「不安定」ではなく非対応です。これを埋めるためのChrome拡張が複数存在するのが、逆に何よりの証拠だと思います。
+
+で、代わりに使えるのが **Google AI Mode** です。
+
+```
+https://www.google.com/search?udm=50&q={encoded}
+```
+
+`udm=50` が AI Mode のスイッチです。中身は Gemini なので、答えるモデルは変わりません。しかもこっちの `q=` は普通の検索クエリなので、URLで渡すのが本来の使い方です。確実に通ります。
+
 :::message alert
-**Gemini の `?q=` はプリフィルが不安定です。** 効く時期と効かない時期があります。というか、これらは各社が「仕様です」と公開してるものではないので、全部予告なく変わります。本番に置くなら、たまに自分で踏んで確認する運用が要ります。
+これらは各社が「仕様です」と公開してるものではないので、全部予告なく変わります。本番に置くなら、たまに自分で踏んで確認する運用が要ります。実際この記事も、下書きの時点では Gemini を4本目に入れてました。
 :::
 
 ## エンコードで詰む話
@@ -196,6 +212,7 @@ HTML。`target="_blank"` と `rel="noopener"` を付けます。
 - note / Markdown / HTML の3形式で書き出し
 - URL長のカウント（2000字超で警告）
 - 生成されるURLの構造を色分け表示
+- Gemini は既定でオフ（選ぶと非対応の警告が出ます）
 
 → **[「AIに聞く」リンクジェネレータ](https://kake-nami.github.io/zenn-content/tools/ask-ai-link-generator.html)**（ソース: [ask-ai-link-generator.html](https://github.com/kake-nami/zenn-content/blob/main/tools/ask-ai-link-generator.html)）
 
@@ -208,10 +225,10 @@ HTML1枚です。外部通信もビルドも要らないので、保存すれば
 
 ```javascript
 const SERVICES = [
-  { name: "ChatGPT",    base: "https://chatgpt.com/?q=" },
-  { name: "Gemini",     base: "https://gemini.google.com/app?q=" },
-  { name: "Claude",     base: "https://claude.ai/new?q=" },
-  { name: "Perplexity", base: "https://www.perplexity.ai/search?q=" },
+  { name: "ChatGPT",        base: "https://chatgpt.com/?q=" },
+  { name: "Google AI Mode", base: "https://www.google.com/search?udm=50&q=" },
+  { name: "Claude",         base: "https://claude.ai/new?q=" },
+  { name: "Perplexity",     base: "https://www.perplexity.ai/search?q=" },
 ];
 
 const build = (prompt, articleUrl) =>
