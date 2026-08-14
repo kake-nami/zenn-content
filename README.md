@@ -87,7 +87,7 @@ published: false   # true にすると公開される
 
 | slug | タイトル | 状態 |
 |---|---|---|
-| `ask-ai-prefill-links` | 「AIに聞く」ボタンの実装 — ?q= プリフィルリンクと llms.txt | 下書き |
+| `ask-ai-prefill-links` | aタグ4本でできる「AIに聞く」ボタンの作り方（?q= プリフィルリンクと llms.txt） | 下書き |
 
 ### 公開前にやること
 
