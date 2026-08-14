@@ -97,6 +97,7 @@ published: false   # true にすると公開される
       → `tools/ask-ai-link-generator.html` を GitHub Pages で公開
 - [x] GitHub Pages を有効化（Source: `main` / `/ (root)`）
       → https://kake-nami.github.io/zenn-content/tools/ask-ai-link-generator.html
-- [ ] スクリーンショット2枚を `images/ask-ai/` に配置
+- [x] スクリーンショット2枚を `images/ask-ai/` に配置
+      → `generator.png`（7章・ツール画面） / `prefilled-result.png`（7章末・踏んだ結果）
 - [ ] 各AIサービスの `?q=` を実際に踏んで、現時点で動くことを確認
 - [ ] `published: true` に変更
