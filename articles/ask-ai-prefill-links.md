@@ -3,7 +3,7 @@ title: "aタグ4本でできる「AIに聞く」ボタンの作り方（?q= プ�
 emoji: "🔗"
 type: "tech"
 topics: ["llm", "llmstxt", "seo", "javascript"]
-published: false
+published: true
 ---
 
 note のほうで、マッチングアプリのLPに仕込まれてた「AIに聞く」ボタンの話を書きました。
