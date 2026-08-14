@@ -95,8 +95,8 @@ published: false   # true にすると公開される
       → https://note.com/clever_lion4185/n/nc2acce158402
 - [x] ジェネレータの配布リンクを差し替え
       → `tools/ask-ai-link-generator.html` を GitHub Pages で公開
-- [ ] GitHub のリポジトリ設定 → Pages → Source を `main` / `/ (root)` にする
-      （設定後、上記の公開URLが有効になる）
+- [x] GitHub Pages を有効化（Source: `main` / `/ (root)`）
+      → https://kake-nami.github.io/zenn-content/tools/ask-ai-link-generator.html
 - [ ] スクリーンショット2枚を `images/ask-ai/` に配置
 - [ ] 各AIサービスの `?q=` を実際に踏んで、現時点で動くことを確認
 - [ ] `published: true` に変更
