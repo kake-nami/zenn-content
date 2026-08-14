@@ -114,5 +114,5 @@ published: false   # true にすると公開される
       → `generator.png`（7章・ツール画面） / `prefilled-result.png`（7章末・踏んだ結果）
 - [x] 各AIサービスの `?q=` を実際に踏んで確認（2026-08-15）
       → ChatGPT / Claude / Perplexity は動作。Gemini のみ非対応 → Google AI Mode に差し替え
-- [ ] `images/ask-ai/generator.png` を撮り直す（サービス欄が Gemini のままの旧UI）
+- [x] `images/ask-ai/generator.png` を AI Mode 対応後のUIで撮り直し（2026-08-15）
 - [ ] `published: true` に変更
