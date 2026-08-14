@@ -100,19 +100,40 @@ published: false   # true にすると公開される
 
 | slug | タイトル | 状態 |
 |---|---|---|
-| `ask-ai-prefill-links` | aタグ4本でできる「AIに聞く」ボタンの作り方（?q= プリフィルリンクと llms.txt） | 下書き |
+| `ask-ai-prefill-links` | aタグ4本でできる「AIに聞く」ボタンの作り方（?q= プリフィルリンクと llms.txt） | **公開済み**（2026-08-15） |
 
-### 公開前にやること
+### 公開までの記録（2026-08-15）
 
 - [x] note 記事へのリンク2箇所を差し替え（冒頭・末尾）
       → https://note.com/clever_lion4185/n/nc2acce158402
-- [x] ジェネレータの配布リンクを差し替え
-      → `tools/ask-ai-link-generator.html` を GitHub Pages で公開
-- [x] GitHub Pages を有効化（Source: `main` / `/ (root)`）
+- [x] ジェネレータを実装し、GitHub Pages で公開
       → https://kake-nami.github.io/zenn-content/tools/ask-ai-link-generator.html
+- [x] GitHub Pages を有効化（Source: `main` / `/ (root)`）
 - [x] スクリーンショット2枚を `images/ask-ai/` に配置
-      → `generator.png`（7章・ツール画面） / `prefilled-result.png`（7章末・踏んだ結果）
-- [x] 各AIサービスの `?q=` を実際に踏んで確認（2026-08-15）
-      → ChatGPT / Claude / Perplexity は動作。Gemini のみ非対応 → Google AI Mode に差し替え
-- [x] `images/ask-ai/generator.png` を AI Mode 対応後のUIで撮り直し（2026-08-15）
-- [ ] `published: true` に変更
+      → `generator.png`（ツール画面） / `prefilled-result.png`（踏んだ結果）
+- [x] 本文を口語リライト版に差し替え（slug は据え置き）
+- [x] 各AIサービスの `?q=` を実機で確認
+      → ChatGPT / Claude / Perplexity は動作。**Gemini のみ非対応**のため Google AI Mode に差し替え
+- [x] Google AI Mode の制約2点に対応（改行が落ちる / 対話にならない）
+- [x] `generator.png` を AI Mode 対応後のUIで撮り直し
+- [x] Zenn の GitHub 連携、`published: true` にして公開
+
+### この記事で分かったこと
+
+実装より、**各社のパラメータが仕様として存在しない**ことのほうが厄介だった。
+
+- `gemini.google.com/app?q=` は非対応。「不安定」ではなく、Google が URL でプロンプトを
+  渡す仕様を出していない。埋めるための Chrome 拡張が複数あるのが証拠
+- 代替の Google AI Mode（`google.com/search?udm=50&q=`）は動くが、`q=` が検索クエリなので
+  `%0A` が落ちる。改行のまま渡すとURL末尾に次の行が直結してURLが壊れる
+- AI Mode は1ターンの検索応答なので「まず質問して」型の対話プロンプトが効かない。
+  型A（説得型）なら成立するが、対話させたいなら ChatGPT / Claude を使う
+
+いずれも公開ドキュメントには書かれておらず、踏んで初めて分かった。**本番に置くなら
+定期的に踏んで確認する運用が要る。**
+
+### 次にやるとき
+
+- [ ] 公開後、各サービスの `?q=` を定期的に踏み直す（仕様は予告なく変わる）
+- [ ] ボタンのクリック数と `chatgpt.com` からの着地数を突き合わせる
+      （突き合わせないと「AI流入が増えた」が自己循環と区別できない）
