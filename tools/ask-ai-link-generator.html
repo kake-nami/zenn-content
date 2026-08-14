@@ -1,0 +1,484 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>「AIに聞く」リンクジェネレータ</title>
+<meta name="description" content="記事URLと質問文から、ChatGPT / Gemini / Claude / Perplexity のプリフィルリンクを生成します。">
+<style>
+  :root {
+    color-scheme: light dark;
+    --bg: #f6f6f4;
+    --panel: #ffffff;
+    --ink: #16181d;
+    --ink-soft: #5c626e;
+    --line: #e2e2dd;
+    --accent: #1f6feb;
+    --warn: #b54708;
+    --danger: #b42318;
+    --ok: #17795e;
+    --code-bg: #f2f2ee;
+    /* URL構造の色分け */
+    --c-base: #6c4bd4;
+    --c-param: #17795e;
+    --c-encoded: #1f6feb;
+    --radius: 10px;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #14161a;
+      --panel: #1b1e24;
+      --ink: #e8e9ec;
+      --ink-soft: #9aa1ad;
+      --line: #2c313a;
+      --accent: #64a2ff;
+      --warn: #f0a45c;
+      --danger: #ff8a80;
+      --ok: #5fd3ac;
+      --code-bg: #23272e;
+      --c-base: #b79dff;
+      --c-param: #5fd3ac;
+      --c-encoded: #64a2ff;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Noto Sans JP", "Yu Gothic UI", sans-serif;
+    line-height: 1.7;
+    font-size: 15px;
+  }
+  .wrap { max-width: 880px; margin: 0 auto; padding: 32px 20px 96px; }
+  header { margin-bottom: 28px; }
+  h1 { font-size: 22px; margin: 0 0 6px; letter-spacing: -0.01em; }
+  .lede { color: var(--ink-soft); margin: 0; font-size: 14px; }
+  .lede a { color: var(--accent); }
+  section {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 18px 18px 20px;
+    margin-bottom: 18px;
+  }
+  h2 {
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--ink-soft);
+    margin: 0 0 14px;
+    font-weight: 600;
+  }
+  label { display: block; font-size: 13px; font-weight: 600; margin-bottom: 6px; }
+  .hint { font-size: 12px; color: var(--ink-soft); font-weight: 400; margin-left: 6px; }
+  input[type="text"], textarea, select {
+    width: 100%;
+    padding: 9px 11px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: inherit;
+    font-size: 14px;
+    line-height: 1.6;
+  }
+  textarea { resize: vertical; min-height: 150px; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 13px; }
+  input:focus, textarea:focus, select:focus { outline: 2px solid var(--accent); outline-offset: -1px; border-color: transparent; }
+  .field { margin-bottom: 14px; }
+  .field:last-child { margin-bottom: 0; }
+  .row { display: flex; gap: 12px; flex-wrap: wrap; }
+  .row > * { flex: 1 1 240px; }
+  .checks { display: flex; gap: 16px; flex-wrap: wrap; margin-top: 4px; }
+  .check { display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 500; }
+  .check input { accent-color: var(--accent); }
+  button {
+    font: inherit;
+    font-size: 13px;
+    padding: 6px 12px;
+    border: 1px solid var(--line);
+    border-radius: 7px;
+    background: var(--bg);
+    color: var(--ink);
+    cursor: pointer;
+  }
+  button:hover { border-color: var(--accent); color: var(--accent); }
+  button.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+  button.primary:hover { opacity: 0.9; color: #fff; }
+  /* 文字数メーター */
+  .meter { margin-top: 10px; }
+  .meter-bar { height: 5px; background: var(--line); border-radius: 3px; overflow: hidden; }
+  .meter-fill { height: 100%; width: 0; background: var(--ok); transition: width .12s linear, background .12s linear; }
+  .meter-text { font-size: 12px; color: var(--ink-soft); margin-top: 5px; display: flex; justify-content: space-between; gap: 10px; }
+  .meter.warn .meter-fill { background: var(--warn); }
+  .meter.over .meter-fill { background: var(--danger); }
+  .meter.warn .meter-text b, .meter.over .meter-text b { color: var(--warn); }
+  .meter.over .meter-text b { color: var(--danger); }
+  /* 結果 */
+  .result { border-top: 1px solid var(--line); padding-top: 14px; margin-top: 14px; }
+  .result:first-of-type { border-top: 0; padding-top: 0; margin-top: 0; }
+  .result-head { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; margin-bottom: 8px; }
+  .result-head strong { font-size: 14px; }
+  .len { font-size: 12px; color: var(--ink-soft); font-variant-numeric: tabular-nums; }
+  .len.warn { color: var(--warn); font-weight: 600; }
+  .len.over { color: var(--danger); font-weight: 600; }
+  .urlbox {
+    background: var(--code-bg);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 9px 11px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 12px;
+    line-height: 1.65;
+    word-break: break-all;
+    max-height: 8.5em;
+    overflow-y: auto;
+  }
+  .u-base { color: var(--c-base); }
+  .u-param { color: var(--c-param); }
+  .u-encoded { color: var(--c-encoded); }
+  .legend { font-size: 12px; color: var(--ink-soft); display: flex; gap: 14px; flex-wrap: wrap; margin-bottom: 12px; }
+  .legend span::before { content: "■ "; }
+  .actions { display: flex; gap: 8px; margin-top: 8px; flex-wrap: wrap; }
+  .out-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 10px; flex-wrap: wrap; }
+  .tabs { display: flex; gap: 6px; flex-wrap: wrap; }
+  .tab { padding: 5px 12px; border-radius: 999px; border: 1px solid var(--line); background: var(--bg); font-size: 13px; cursor: pointer; }
+  .tab[aria-selected="true"] { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+  pre {
+    margin: 0;
+    background: var(--code-bg);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 12px;
+    overflow-x: auto;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 12.5px;
+    line-height: 1.7;
+    white-space: pre-wrap;
+    word-break: break-all;
+  }
+  .note { font-size: 12.5px; color: var(--ink-soft); margin: 10px 0 0; }
+  .alert {
+    font-size: 13px;
+    border-left: 3px solid var(--warn);
+    padding: 8px 12px;
+    background: var(--code-bg);
+    border-radius: 0 8px 8px 0;
+    margin-top: 14px;
+    color: var(--ink-soft);
+  }
+  footer { color: var(--ink-soft); font-size: 12px; text-align: center; margin-top: 28px; }
+  footer a { color: var(--accent); }
+  .toast {
+    position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%) translateY(10px);
+    background: var(--ink); color: var(--bg); padding: 8px 16px; border-radius: 999px;
+    font-size: 13px; opacity: 0; pointer-events: none; transition: opacity .15s, transform .15s;
+  }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <h1>「AIに聞く」リンクジェネレータ</h1>
+  <p class="lede">記事URLと質問文から、ChatGPT / Gemini / Claude / Perplexity のプリフィルリンクを生成します。すべてブラウザ内で完結し、入力内容はどこにも送信されません。</p>
+</header>
+
+<section>
+  <h2>1. 入力</h2>
+
+  <div class="field">
+    <label for="articleUrl">記事URL <span class="hint">プロンプト内の <code>{url}</code> に差し込まれます</span></label>
+    <input type="text" id="articleUrl" placeholder="https://zenn.dev/kake_nami/articles/ask-ai-prefill-links">
+  </div>
+
+  <div class="field">
+    <label for="preset">プリセット</label>
+    <select id="preset"></select>
+  </div>
+
+  <div class="field">
+    <label for="prompt">質問文</label>
+    <textarea id="prompt" spellcheck="false"></textarea>
+    <div class="meter" id="meter">
+      <div class="meter-bar"><div class="meter-fill" id="meterFill"></div></div>
+      <div class="meter-text">
+        <span>最長URL <b id="meterLen">0</b> / 2000 文字（エンコード後）</span>
+        <span id="meterMsg">本文 0 字</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="field">
+    <label>サービス</label>
+    <div class="checks" id="services"></div>
+  </div>
+
+  <div class="field">
+    <label>オプション <span class="hint">ChatGPT のみに効きます</span></label>
+    <div class="checks">
+      <label class="check"><input type="checkbox" id="optSearch"> Web検索を強制（<code>hints=search</code>）</label>
+      <label class="check"><input type="checkbox" id="optTemp"> 一時チャット（<code>temporary-chat=true</code>）</label>
+    </div>
+  </div>
+</section>
+
+<section>
+  <h2>2. 生成されたURL</h2>
+  <div class="legend">
+    <span class="u-base">ベースURL</span>
+    <span class="u-param">クエリパラメータ</span>
+    <span class="u-encoded">エンコードされた質問文</span>
+  </div>
+  <div id="results"></div>
+</section>
+
+<section>
+  <h2>3. 貼り付け用</h2>
+  <div class="out-head">
+    <div class="tabs" id="tabs" role="tablist">
+      <button class="tab" role="tab" data-fmt="note" aria-selected="true">note</button>
+      <button class="tab" role="tab" data-fmt="md" aria-selected="false">Markdown</button>
+      <button class="tab" role="tab" data-fmt="html" aria-selected="false">HTML</button>
+    </div>
+    <button class="primary" id="copyOut">コピー</button>
+  </div>
+  <pre id="output"></pre>
+  <p class="note" id="outNote"></p>
+</section>
+
+<div class="alert">
+  Gemini の <code>?q=</code> はプリフィルが不安定です。またこれらは各社が仕様として公開しているパラメータではないため、予告なく変わります。本番に置くなら定期的に踏んで確認してください。
+</div>
+
+<footer>
+  <a href="https://github.com/kake-nami/zenn-content">kake-nami/zenn-content</a> — 単一HTMLファイル。保存すればオフラインでも動きます。
+</footer>
+
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+const SERVICES = [
+  { id: "chatgpt",    name: "ChatGPT",    base: "https://chatgpt.com/",                param: "q", opts: true },
+  { id: "gemini",     name: "Gemini",     base: "https://gemini.google.com/app",       param: "q" },
+  { id: "claude",     name: "Claude",     base: "https://claude.ai/new",               param: "q" },
+  { id: "perplexity", name: "Perplexity", base: "https://www.perplexity.ai/search",    param: "q" },
+];
+
+const PRESETS = [
+  {
+    name: "自分の状況に当てはめる",
+    body: `次の記事を読んでください。
+{url}
+
+この記事の内容が私の状況に当てはまるかを確認したいです。
+いきなり結論を出さず、まず私の業種・職種・組織規模について5つ質問してください。
+記事が読めなかった場合は、その旨を最初に答えてください。`
+  },
+  {
+    name: "実務に落とす",
+    body: `次の記事を読んでください。
+{url}
+
+この記事の手法を私の業務に合わせて具体化したいです。
+まず私の職種と、いま時間を取られている作業について質問してから提案してください。
+記事が読めなかった場合は、その旨を最初に答えてください。`
+  },
+  {
+    name: "反論させる",
+    body: `次の記事を読んでください。
+{url}
+
+この記事の主張のうち、根拠が弱い箇所・反証がある箇所を指摘してください。
+そのうえで、どういう条件下ならこの主張が成り立たないかを整理してください。`
+  },
+  {
+    name: "前提を確認する",
+    body: `次の記事を読んでください。
+{url}
+
+この手法を導入する前に、自社側で満たしておくべき前提条件を洗い出してください。
+満たせていない場合に何が起きるかもあわせて教えてください。`
+  },
+  {
+    name: "見積型（スロット2つ）",
+    body: `{url} の情報をもとに候補を出してください。
+エリア：
+予算：
+
+該当がない場合は、条件をどう緩めれば候補が出るかを教えてください。`
+  },
+  { name: "（自由入力）", body: "" },
+];
+
+const MAX_URL = 2000;
+const WARN_URL = 1800;
+
+const $ = id => document.getElementById(id);
+const el = { url: $("articleUrl"), preset: $("preset"), prompt: $("prompt"),
+             services: $("services"), results: $("results"), output: $("output"),
+             outNote: $("outNote"), optSearch: $("optSearch"), optTemp: $("optTemp") };
+let format = "note";
+let lastEditedByUser = false;
+
+// --- 初期化 ---
+PRESETS.forEach((p, i) => {
+  const o = document.createElement("option");
+  o.value = i; o.textContent = p.name;
+  el.preset.appendChild(o);
+});
+SERVICES.forEach(s => {
+  const label = document.createElement("label");
+  label.className = "check";
+  label.innerHTML = `<input type="checkbox" data-svc="${s.id}" checked> ${s.name}`;
+  el.services.appendChild(label);
+});
+el.prompt.value = PRESETS[0].body;
+
+// --- ロジック ---
+function activeServices() {
+  const ids = [...el.services.querySelectorAll("input:checked")].map(i => i.dataset.svc);
+  return SERVICES.filter(s => ids.includes(s.id));
+}
+
+function resolvedPrompt() {
+  const url = el.url.value.trim();
+  return el.prompt.value.replaceAll("{url}", url || "{url}");
+}
+
+/** サービスごとのURLを、構造ごとに分解して返す */
+function buildParts(svc, prompt) {
+  const encoded = encodeURIComponent(prompt);
+  const extra = [];
+  if (svc.opts) {
+    if (el.optSearch.checked) extra.push("hints=search");
+    if (el.optTemp.checked) extra.push("temporary-chat=true");
+  }
+  const query = [...extra, `${svc.param}=`];
+  return {
+    base: svc.base,
+    // 先頭の "?" と、パラメータ名までを param 扱いにする
+    param: "?" + query.join("&"),
+    encoded,
+    url: svc.base + "?" + [...extra, `${svc.param}=${encoded}`].join("&"),
+  };
+}
+
+const escapeHtml = s => s.replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+
+function render() {
+  const prompt = resolvedPrompt();
+  const svcs = activeServices();
+  const built = svcs.map(s => ({ svc: s, parts: buildParts(s, prompt) }));
+
+  // 結果カード
+  el.results.innerHTML = "";
+  if (!built.length) {
+    el.results.innerHTML = `<p class="note">サービスを1つ以上選んでください。</p>`;
+  }
+  built.forEach(({ svc, parts }) => {
+    const len = parts.url.length;
+    const cls = len > MAX_URL ? "over" : len > WARN_URL ? "warn" : "";
+    const div = document.createElement("div");
+    div.className = "result";
+    div.innerHTML = `
+      <div class="result-head">
+        <strong>${svc.name}</strong>
+        <span class="len ${cls}">${len.toLocaleString()} 文字${len > MAX_URL ? "（上限超過）" : len > WARN_URL ? "（要注意）" : ""}</span>
+      </div>
+      <div class="urlbox"><span class="u-base">${escapeHtml(parts.base)}</span><span class="u-param">${escapeHtml(parts.param)}</span><span class="u-encoded">${escapeHtml(parts.encoded)}</span></div>
+      <div class="actions">
+        <button data-copy="${escapeHtml(parts.url)}">URLをコピー</button>
+        <a href="${escapeHtml(parts.url)}" target="_blank" rel="noopener"><button>開いて確認</button></a>
+      </div>`;
+    el.results.appendChild(div);
+  });
+
+  // メーター（最長URL基準）
+  const maxLen = built.length ? Math.max(...built.map(b => b.parts.url.length)) : 0;
+  const meter = $("meter");
+  meter.className = "meter" + (maxLen > MAX_URL ? " over" : maxLen > WARN_URL ? " warn" : "");
+  $("meterFill").style.width = Math.min(100, (maxLen / MAX_URL) * 100) + "%";
+  $("meterLen").textContent = maxLen.toLocaleString();
+  $("meterMsg").textContent = maxLen > MAX_URL
+    ? "上限超過。環境によって切り捨てられます"
+    : `本文 ${el.prompt.value.length} 字`;
+
+  renderOutput(built);
+}
+
+function renderOutput(built) {
+  const lines = [];
+  if (format === "note") {
+    built.forEach(({ svc, parts }) => lines.push(`${svc.name}に聞く\n${parts.url}\n`));
+    el.outNote.textContent = "note では本文に「◯◯に聞く」と打ち、その文字を選択してからリンク挿入でURLを貼ります。URLを直接貼るとカード化されます。";
+  } else if (format === "md") {
+    built.forEach(({ svc, parts }) => lines.push(`[${svc.name}に聞く](${parts.url})`));
+    el.outNote.textContent = "Zenn / GitHub / Obsidian などにそのまま貼れます。";
+  } else {
+    built.forEach(({ svc, parts }) =>
+      lines.push(`<a href="${escapeHtml(parts.url)}" target="_blank" rel="noopener">${svc.name}に聞く</a>`));
+    el.outNote.textContent = "自前サイト向け。target=\"_blank\" と rel=\"noopener\" を付けています。";
+  }
+  el.output.textContent = lines.join("\n") || "（サービス未選択）";
+}
+
+function toast(msg) {
+  const t = $("toast");
+  t.textContent = msg;
+  t.classList.add("show");
+  clearTimeout(toast._t);
+  toast._t = setTimeout(() => t.classList.remove("show"), 1400);
+}
+
+async function copy(text, msg) {
+  try {
+    await navigator.clipboard.writeText(text);
+    toast(msg);
+  } catch {
+    // file:// や権限なしの環境向けフォールバック
+    const ta = document.createElement("textarea");
+    ta.value = text;
+    ta.style.position = "fixed"; ta.style.opacity = "0";
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand("copy");
+    ta.remove();
+    toast(msg);
+  }
+}
+
+// --- イベント ---
+el.preset.addEventListener("change", () => {
+  const p = PRESETS[el.preset.value];
+  if (lastEditedByUser && el.prompt.value.trim() &&
+      !confirm("編集中の質問文をプリセットで上書きします。よろしいですか？")) {
+    return;
+  }
+  el.prompt.value = p.body;
+  lastEditedByUser = false;
+  render();
+});
+el.prompt.addEventListener("input", () => { lastEditedByUser = true; render(); });
+[el.url, el.optSearch, el.optTemp].forEach(n => n.addEventListener("input", render));
+el.services.addEventListener("change", render);
+
+el.results.addEventListener("click", e => {
+  const btn = e.target.closest("button[data-copy]");
+  if (btn) copy(btn.dataset.copy, "URLをコピーしました");
+});
+$("tabs").addEventListener("click", e => {
+  const tab = e.target.closest(".tab");
+  if (!tab) return;
+  format = tab.dataset.fmt;
+  [...$("tabs").children].forEach(t => t.setAttribute("aria-selected", String(t === tab)));
+  render();
+});
+$("copyOut").addEventListener("click", () => copy(el.output.textContent, "コピーしました"));
+
+render();
+</script>
+</body>
+</html>

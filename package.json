@@ -1,0 +1,15 @@
+{
+  "name": "zenn-content",
+  "version": "1.0.0",
+  "private": true,
+  "description": "kake-nami の Zenn 記事リポジトリ",
+  "scripts": {
+    "preview": "zenn preview",
+    "new:article": "zenn new:article",
+    "new:book": "zenn new:book",
+    "list": "zenn list:articles"
+  },
+  "devDependencies": {
+    "zenn-cli": "^0.1.158"
+  }
+}
